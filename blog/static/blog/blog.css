@@ -35,3 +35,7 @@ ul.blog-info-description li {
 /*div.block-content {*/
     /*text-indent: 2em;*/
 /*}*/
+
+div.block-more {
+    margin-top: 1em;
+}
