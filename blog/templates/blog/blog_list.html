@@ -24,7 +24,8 @@
                                     <span class="glyphicon glyphicon-tag"></span> <a
                                         href="{% url 'blogs_with_type' blog.blog_type.pk %}">{{ blog.blog_type }}</a>
                                     &nbsp;&nbsp;
-                                    <span class="glyphicon glyphicon-time"></span> {{ blog.create_time|date:"Y-m-d" }}
+                                    <span class="glyphicon glyphicon-time"></span> {{ blog.create_time|date:"Y-m-d" }}&nbsp;&nbsp;
+                                    <span class="glyphicon glyphicon-eye-open"></span> 阅读({{ blog.get_read_num }})
                                 </p>
                                 <p>{{ blog.content|striptags|truncatechars:120 }}</p>
                             </div>
@@ -94,7 +95,7 @@
                         <ul class="blog-types">
                             {% for blog_type in blog_types %}
                                 <li>
-                                    <a href="{% url 'blogs_with_type' blog_type.pk %}">{{ blog_type.type_name }}</a>
+                                    <a href="{% url 'blogs_with_type' blog_type.pk %}">{{ blog_type.type_name }} ({{ blog_type.blog_count }})</a>
                                 </li>
                             {% empty %}
                                 <li>暂无分类</li>
@@ -108,9 +109,11 @@
                     </div>
                     <div class="panel-body">
                         <ul>
-                            {% for blog_date in blog_dates %}
+                            {% for blog_date,blog_count in blog_dates.items %}
                                 <li>
-                                    <a href="{% url 'block_with_date' blog_date.year blog_date.month %}">{{ blog_date|date:'Y年m月' }}</a>
+                                    <a href="{% url 'block_with_date' blog_date.year blog_date.month %}">
+                                        {{ blog_date|date:'Y年m月' }} ({{ blog_count }})
+                                    </a>
                                 </li>
                             {% endfor %}
                         </ul>

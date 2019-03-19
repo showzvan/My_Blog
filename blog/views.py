@@ -1,7 +1,11 @@
 from django.shortcuts import render_to_response,get_object_or_404
 from django.core.paginator import Paginator
+from django.contrib.contenttypes.models import ContentType
 from . models import BlogType,Blog
+from django.db.models import Count
+from read_statistics.models import ReadNum
 from django.conf import settings
+from read_statistics.utils import read_statistics_once_read
 
 
 def get_blog_list_common_data(request,blog_all_list,):
@@ -23,28 +27,30 @@ def get_blog_list_common_data(request,blog_all_list,):
     if page_range[-1] != paginator.num_pages:
         page_range.append(paginator.num_pages)
 
+    # 获取日期归档对应的博客数量
+    blog_dates = Blog.objects.dates('create_time', 'month', order='DESC')
+    blog_dates_dict = {}
+    for blog_date in blog_dates:
+        blog_count = Blog.objects.filter(create_time__year=blog_date.year,
+                            create_time__month=blog_date.month).count()
+        blog_dates_dict[blog_date] = blog_count
+
     context = {
         'blogs': page_of_blogs.object_list,
         'page_of_blogs': page_of_blogs,
         'page_range': page_range,
-        'blog_types': BlogType.objects.all(),
-        'blog_dates': Blog.objects.dates('create_time', 'month', order='DESC')  # 返回一个固定的日期，得到列表
+        # 'blog_types': BlogType.objects.annotate(blog_count=Count('blog')), # 获取博客分类的对应博客数量
+        'blog_types': BlogType.objects.annotate(blog_count=Count('blog')), # 获取博客分类的对应博客数量
+        'blog_dates': blog_dates_dict  # 返回一个固定的日期，得到列表
     }
     return context
+
 
 def blog_list(request):
     blog_all_list = Blog.objects.all()
     context = get_blog_list_common_data(request,blog_all_list)
     return render_to_response('blog/blog_list.html', context=context)
 
-def blog_detail(request,blog_pk):
-    blog = get_object_or_404(Blog, pk=blog_pk)
-    context = {
-        'blog': blog,
-        'previous_blog':Blog.objects.filter(create_time__gt=blog.create_time).last(),
-        'next_blog':Blog.objects.filter(create_time__lt=blog.create_time).first()
-    }
-    return render_to_response('blog/blog_detail.html', context=context)
 
 def blogs_with_type(request,blogs_type_pk):
     blog_type = get_object_or_404(BlogType,pk=blogs_type_pk)
@@ -60,4 +66,15 @@ def blogs_with_date(request,year,month):
     context['blogs_with_date'] = '%s年%s月' %(year, month)
     return render_to_response('blog/blog_with_date.html', context=context)
 
+def blog_detail(request,blog_pk):
+    blog = get_object_or_404(Blog, pk=blog_pk)
+    read_cookie_key = read_statistics_once_read(request,blog)
 
+    context = {
+        'blog': blog,
+        'previous_blog':Blog.objects.filter(create_time__gt=blog.create_time).last(),
+        'next_blog':Blog.objects.filter(create_time__lt=blog.create_time).first()
+    }
+    response = render_to_response('blog/blog_detail.html', context=context) # 响应
+    response.set_cookie(read_cookie_key,'true') # 阅读cookie标记
+    return response
